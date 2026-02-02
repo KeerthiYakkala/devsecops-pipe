@@ -1,0 +1,91 @@
+# Trivy Configuration for DevSecOps Pipeline
+# Documentation: https://aquasecurity.github.io/trivy/
+
+# Scan targets
+scan:
+  # Skip directories
+  skip-dirs:
+    - node_modules
+    - .git
+    - vendor
+    - __pycache__
+    - .venv
+    - venv
+    - dist
+    - build
+
+  # Skip files
+  skip-files:
+    - "**/*.test.js"
+    - "**/*.spec.js"
+    - "**/test_*.py"
+    - "**/*_test.py"
+
+# Vulnerability settings
+vulnerability:
+  # Severity levels to report
+  severity:
+    - CRITICAL
+    - HIGH
+    - MEDIUM
+
+  # Vulnerability types
+  type:
+    - os
+    - library
+
+  # Ignore unfixed vulnerabilities in reports
+  ignore-unfixed: false
+
+# Secret scanning
+secret:
+  # Enable secret scanning
+  enable: true
+
+# Misconfiguration scanning
+misconfiguration:
+  # Enable misconfiguration scanning
+  enable: true
+
+  # Scanners to use
+  scanners:
+    - dockerfile
+    - kubernetes
+    - terraform
+    - cloudformation
+
+# Output format
+format: json
+
+# Cache settings
+cache:
+  # Backend for cache
+  backend: fs
+
+# Database settings
+db:
+  # Skip database update (use for offline environments)
+  skip-db-update: false
+
+  # Download only if database is older than this
+  download-db-only: false
+
+# Registries (for private image scanning)
+# registry:
+#   username: ""
+#   password: ""
+
+# Ignore specific CVEs (with justification)
+# Use sparingly and document reasoning
+vulnerability:
+  ignorefile: .trivyignore
+
+# Timeout for scans
+timeout: 5m
+
+# Exit code settings
+exit-code:
+  # Exit with code 1 if vulnerabilities found
+  vulnerability: 1
+  # Exit with code 1 if misconfigurations found
+  misconfiguration: 1

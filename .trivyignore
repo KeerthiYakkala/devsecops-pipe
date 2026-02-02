@@ -1,0 +1,25 @@
+# Trivy Ignore File
+# Add CVE IDs here to ignore specific vulnerabilities
+# Format: CVE-YYYY-XXXXX
+#
+# IMPORTANT: Document the reason for each ignored vulnerability
+# and include a ticket number for tracking
+
+# Example (remove when adding real entries):
+# CVE-2021-44228  # Log4Shell - Not affected, using Python
+# CVE-2023-xxxxx  # Accepted risk - SEC-123 - No fix available until Q2
+
+# =============================================================================
+# Accepted Risks (with justification)
+# =============================================================================
+
+
+# =============================================================================
+# False Positives
+# =============================================================================
+
+
+# =============================================================================
+# Pending Fix (tracked in issues)
+# =============================================================================
+

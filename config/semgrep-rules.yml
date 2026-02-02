@@ -1,0 +1,253 @@
+# Custom Semgrep Rules for DevSecOps Pipeline
+# These rules supplement the standard rulesets with project-specific checks
+
+rules:
+  # =============================================================================
+  # Hardcoded Secrets Detection
+  # =============================================================================
+  - id: hardcoded-api-key
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $KEY = "..."
+          - pattern: |
+              $KEY = '...'
+    pattern-regex: '(?i)(api[_-]?key|apikey|secret[_-]?key|secretkey|access[_-]?token)\s*[=:]\s*["\'][a-zA-Z0-9+/=_-]{20,}["\']'
+    message: "Potential hardcoded API key or secret detected"
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      technology: [secrets]
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A3:2017 - Sensitive Data Exposure"
+
+  - id: hardcoded-password
+    patterns:
+      - pattern-either:
+          - pattern: |
+              password = "..."
+          - pattern: |
+              password = '...'
+          - pattern: |
+              PASSWORD = "..."
+          - pattern: |
+              passwd = "..."
+    pattern-not-regex: '(password\s*=\s*["\'](\${.*}|None|null|""|\'\'))'
+    message: "Hardcoded password detected. Use environment variables or a secrets manager."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-259: Use of Hard-coded Password"
+
+  # =============================================================================
+  # SQL Injection Prevention
+  # =============================================================================
+  - id: sql-injection-format-string
+    patterns:
+      - pattern: |
+          $QUERY = f"... {$VAR} ..."
+      - pattern-regex: '(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC)'
+    message: "Possible SQL injection via f-string. Use parameterized queries instead."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A1:2017 - Injection"
+
+  - id: sql-injection-concatenation
+    pattern: |
+      $QUERY = "..." + $VAR + "..."
+    pattern-regex: '(SELECT|INSERT|UPDATE|DELETE)'
+    message: "Possible SQL injection via string concatenation. Use parameterized queries."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+
+  # =============================================================================
+  # Command Injection Prevention
+  # =============================================================================
+  - id: command-injection-subprocess
+    patterns:
+      - pattern: subprocess.call($ARGS, shell=True, ...)
+      - pattern: subprocess.run($ARGS, shell=True, ...)
+      - pattern: subprocess.Popen($ARGS, shell=True, ...)
+    message: "Using shell=True with subprocess can lead to command injection. Use shell=False with a list of arguments."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-78: OS Command Injection"
+
+  - id: command-injection-os-system
+    pattern: os.system($CMD)
+    message: "os.system() is vulnerable to command injection. Use subprocess with shell=False instead."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-78: OS Command Injection"
+
+  # =============================================================================
+  # Insecure Deserialization
+  # =============================================================================
+  - id: insecure-pickle-load
+    patterns:
+      - pattern: pickle.load(...)
+      - pattern: pickle.loads(...)
+    message: "Unpickling data from untrusted sources is dangerous. Consider using JSON or a safe alternative."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+
+  - id: insecure-yaml-load
+    pattern: yaml.load($DATA, ...)
+    pattern-not: yaml.load($DATA, Loader=yaml.SafeLoader, ...)
+    pattern-not: yaml.safe_load(...)
+    message: "yaml.load() with default Loader is unsafe. Use yaml.safe_load() or yaml.load(data, Loader=yaml.SafeLoader)"
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+
+  # =============================================================================
+  # Cryptographic Issues
+  # =============================================================================
+  - id: weak-hash-md5
+    patterns:
+      - pattern: hashlib.md5(...)
+      - pattern: MD5.new(...)
+    message: "MD5 is cryptographically weak. Use SHA-256 or better for security purposes."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-328: Reversible One-Way Hash"
+
+  - id: weak-hash-sha1
+    patterns:
+      - pattern: hashlib.sha1(...)
+      - pattern: SHA.new(...)
+    message: "SHA-1 is deprecated for security purposes. Use SHA-256 or better."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-328: Reversible One-Way Hash"
+
+  # =============================================================================
+  # Flask Security
+  # =============================================================================
+  - id: flask-debug-mode
+    pattern: app.run(..., debug=True, ...)
+    message: "Debug mode should be disabled in production. Use environment variable to control."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      technology: [flask]
+
+  - id: flask-secret-key-hardcoded
+    pattern: |
+      app.secret_key = "..."
+    message: "Secret key should not be hardcoded. Use environment variables."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      technology: [flask]
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+
+  # =============================================================================
+  # Express/Node.js Security
+  # =============================================================================
+  - id: express-no-helmet
+    patterns:
+      - pattern: |
+          const app = express()
+      - pattern-not: |
+          app.use(helmet(...))
+    message: "Express app should use helmet middleware for security headers."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      technology: [express]
+
+  - id: node-eval-usage
+    patterns:
+      - pattern: eval($CODE)
+      - pattern: new Function($CODE)
+    message: "eval() and new Function() are dangerous with untrusted input. Avoid if possible."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-94: Code Injection"
+
+  # =============================================================================
+  # Logging Security
+  # =============================================================================
+  - id: sensitive-data-logging
+    patterns:
+      - pattern: |
+          $LOG.info(..., password=..., ...)
+      - pattern: |
+          $LOG.debug(..., $SECRET, ...)
+      - pattern: |
+          console.log(..., password, ...)
+    pattern-regex: '(password|secret|token|api_key|apikey|credential)'
+    message: "Avoid logging sensitive data like passwords, tokens, or API keys."
+    languages: [python, javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-532: Information Exposure Through Log Files"
+
+  # =============================================================================
+  # Path Traversal
+  # =============================================================================
+  - id: path-traversal-open
+    patterns:
+      - pattern: open($PATH, ...)
+      - pattern: |
+          with open($PATH, ...) as $F:
+            ...
+    pattern-not: |
+      $PATH = os.path.join($BASE, os.path.basename($FILE))
+    message: "Ensure file path is validated to prevent path traversal attacks."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-22: Path Traversal"
+
+  # =============================================================================
+  # Docker Security
+  # =============================================================================
+  - id: dockerfile-root-user
+    pattern: |
+      USER root
+    message: "Container should not run as root. Create and use a non-root user."
+    languages: [dockerfile]
+    severity: WARNING
+    metadata:
+      category: security
+      technology: [docker]
+
+  - id: dockerfile-latest-tag
+    pattern: |
+      FROM $IMAGE:latest
+    message: "Avoid using 'latest' tag. Pin to specific version for reproducibility and security."
+    languages: [dockerfile]
+    severity: WARNING
+    metadata:
+      category: security
+      technology: [docker]

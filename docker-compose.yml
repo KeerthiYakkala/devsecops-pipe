@@ -1,0 +1,73 @@
+version: '3.8'
+
+# Docker Compose for DevSecOps Pipeline Testing
+# This file is used by the DAST scanner to run applications during testing
+
+services:
+  # Python Application
+  python-app:
+    build:
+      context: ./examples/python-app
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - FLASK_ENV=testing
+      - PORT=8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - security-net
+    restart: unless-stopped
+
+  # Node.js Application
+  node-app:
+    build:
+      context: ./examples/node-app
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      - NODE_ENV=testing
+      - PORT=8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - security-net
+    restart: unless-stopped
+
+  # OWASP ZAP Scanner (for local testing)
+  zap:
+    image: zaproxy/zap-stable:latest
+    command: >
+      zap-baseline.py
+      -t http://python-app:8080
+      -r zap-report.html
+      -c /zap/wrk/zap-rules.tsv
+    volumes:
+      - ./config/zap-rules.tsv:/zap/wrk/zap-rules.tsv:ro
+      - ./security-reports:/zap/wrk:rw
+    depends_on:
+      python-app:
+        condition: service_healthy
+    networks:
+      - security-net
+    profiles:
+      - security-scan
+
+networks:
+  security-net:
+    driver: bridge
+
+# Usage:
+# Start applications: docker-compose up -d python-app node-app
+# Run ZAP scan: docker-compose --profile security-scan up zap
+# Stop all: docker-compose down

@@ -1,0 +1,119 @@
+# ZAP Baseline Scan Rules Configuration
+# Format: ID	ACTION	DESCRIPTION
+# Actions: IGNORE, WARN, FAIL
+# Documentation: https://www.zaproxy.org/docs/docker/baseline-scan/
+
+# ============================================================
+# HIGH SEVERITY - Always fail the build
+# ============================================================
+10016	FAIL	Web Browser XSS Protection Not Enabled
+10017	FAIL	Cross-Domain JavaScript Source File Inclusion
+10019	FAIL	Content-Type Header Missing
+10020	FAIL	X-Frame-Options Header Not Set
+10021	FAIL	X-Content-Type-Options Header Missing
+10023	FAIL	Information Disclosure - Debug Error Messages
+10024	FAIL	Information Disclosure - Sensitive Information in URL
+10025	FAIL	Information Disclosure - Sensitive Information in HTTP Referrer Header
+10027	FAIL	Information Disclosure - Suspicious Comments
+10028	FAIL	Open Redirect
+10029	FAIL	Cookie Poisoning
+10030	FAIL	User Controllable Charset
+10031	FAIL	User Controllable HTML Element Attribute
+10032	FAIL	Viewstate Scanner
+10034	FAIL	Heartbleed OpenSSL Vulnerability
+10035	FAIL	Strict-Transport-Security Header Not Set
+10036	FAIL	Server Leaks Version Information via Server HTTP Response Header Field
+10037	FAIL	Server Leaks Information via X-Powered-By HTTP Response Header Field
+10038	FAIL	Content Security Policy (CSP) Header Not Set
+10039	FAIL	X-Backend-Server Header Information Leak
+10040	FAIL	Secure Pages Include Mixed Content
+10041	FAIL	HTTP to HTTPS Insecure Transition in Form Post
+10042	FAIL	HTTPS to HTTP Insecure Transition in Form Post
+10043	FAIL	User Controllable JavaScript Event (XSS)
+10044	FAIL	Big Redirect Detected (Potential Sensitive Information Leak)
+10045	FAIL	Source Code Disclosure - /WEB-INF folder
+10048	FAIL	Remote Code Execution - Shell Shock
+10049	FAIL	Non-Storable Content
+10050	FAIL	Retrieved from Cache
+10052	FAIL	X-ChromeLogger-Data Header Information Leak
+10054	FAIL	Cookie Without SameSite Attribute
+10055	FAIL	CSP Wildcard Directive
+10056	FAIL	X-Debug-Token Header Information Leak
+10057	FAIL	Username Hash Found
+10061	FAIL	X-AspNet-Version Response Header
+10062	FAIL	PII Disclosure
+10063	FAIL	Permissions Policy Header Not Set
+10096	FAIL	Timestamp Disclosure - Unix
+10097	FAIL	Hash Disclosure
+10098	FAIL	Cross-Domain Misconfiguration
+10105	FAIL	Weak Authentication Method
+10106	FAIL	HTTP Only Site
+
+# ============================================================
+# MEDIUM SEVERITY - Warn but don't fail (review recommended)
+# ============================================================
+10009	WARN	In Page Banner Information Leak
+10010	WARN	Cookie No HttpOnly Flag
+10011	WARN	Cookie Without Secure Flag
+10012	WARN	Password Autocomplete in Browser
+10015	WARN	Incomplete or No Cache-control Header Set
+10033	WARN	Directory Browsing
+10047	WARN	HTTPS Content Available via HTTP
+10051	WARN	Relative Path Confusion
+10053	WARN	Apache Range Header DoS (CVE-2011-3192)
+10095	WARN	Backup File Disclosure
+10099	WARN	Source Code Disclosure - PHP
+10101	WARN	Dangerous JS Functions
+10102	WARN	Script Served from Malicious Domain
+10103	WARN	Site Isolation Scan Rule
+10104	WARN	User Agent Fuzzer
+10107	WARN	Httpoxy - Proxy Header Misuse
+10108	WARN	Reverse Tabnabbing
+10109	WARN	Modern Web Application
+10110	WARN	Dangerous JS Functions
+10111	WARN	Authentication Credentials Captured
+
+# ============================================================
+# LOW SEVERITY - Ignore (informational only)
+# ============================================================
+10003	IGNORE	Vulnerable JS Library (handled by npm audit)
+10013	IGNORE	Weak HTTP Authentication (if intentional)
+10014	IGNORE	Cross Site Scripting (DOM Based) - informational
+10026	IGNORE	HTTP Parameter Override
+10046	IGNORE	Cross Site Request Forgery Token
+10094	IGNORE	Base64 Disclosure
+10100	IGNORE	Insufficient Site Isolation Against Spectre Vulnerability
+
+# ============================================================
+# Custom Application Rules
+# ============================================================
+# Add project-specific rules below
+# Example:
+# 12345	IGNORE	Custom rule for specific endpoint
+
+# API-specific rules (if scanning APIs)
+40003	WARN	CRLF Injection
+40012	WARN	Cross Site Scripting (Reflected)
+40014	WARN	Cross Site Scripting (Persistent)
+40016	WARN	Cross Site Scripting (Persistent) - Prime
+40017	WARN	Cross Site Scripting (Persistent) - Spider
+40018	WARN	SQL Injection
+40019	WARN	SQL Injection - MySQL
+40020	WARN	SQL Injection - Hypersonic SQL
+40021	WARN	SQL Injection - Oracle
+40022	WARN	SQL Injection - PostgreSQL
+40024	WARN	SQL Injection - SQLite
+90017	WARN	XSLT Injection
+90019	WARN	Server Side Code Injection
+90020	WARN	Remote OS Command Injection
+90021	WARN	XPath Injection
+90022	WARN	Application Error Disclosure
+90023	WARN	XML External Entity Attack
+90024	WARN	Generic Padding Oracle
+90025	WARN	Expression Language Injection
+90026	WARN	SOAP Action Spoofing
+90027	WARN	Cookie Slack Detector
+90028	WARN	Insecure HTTP Method
+90029	WARN	SOAP XML Injection
+90030	WARN	WSDL File Detection
+90033	WARN	Loosely Scoped Cookie

@@ -1,0 +1,26 @@
+# DevSecOps Demo Python Application Dependencies
+# Pinned versions for reproducible builds and security scanning
+
+# Web Framework
+flask==3.0.0
+flask-cors==4.0.0
+
+# Production WSGI Server
+gunicorn==21.2.0
+
+# Security
+python-dotenv==1.0.0
+
+# Database (example)
+sqlalchemy==2.0.23
+
+# Utilities
+requests==2.31.0
+
+# Testing
+pytest==7.4.3
+pytest-cov==4.1.0
+
+# Linting (dev)
+# flake8==6.1.0
+# black==23.11.0
