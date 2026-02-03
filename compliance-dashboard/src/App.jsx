@@ -1,114 +1,92 @@
 import './App.css'
-import findings from './data/findings.json'
+import { useEffect, useState } from 'react'
 
-function App() {
-  const getStatusStyle = (status) => {
-    return {
-      padding: '4px 12px',
-      borderRadius: '4px',
-      fontWeight: 'bold',
-      color: 'white',
-      backgroundColor: status === 'PASS' ? '#22c55e' : '#ef4444'
-    }
-  }
-
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'CRITICAL':
-        return '#dc2626'
-      case 'HIGH':
-        return '#f97316'
-      case 'MEDIUM':
-        return '#eab308'
-      case 'LOW':
-        return '#3b82f6'
-      default:
-        return '#6b7280'
-    }
+function Section({ title, items }) {
+  if (!items || items.length === 0) {
+    return null
   }
 
   return (
-    <div style={{
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '20px',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
-      <h1 style={{
-        textAlign: 'center',
-        marginBottom: '40px',
-        color: '#1f2937'
-      }}>
-        Security Compliance Dashboard
-      </h1>
+    <div className="section">
+      <h2 className="section-title">{title}</h2>
 
-      {findings.sections.map(section => (
-        <div key={section.name} style={{
-          marginBottom: '40px',
-          backgroundColor: '#f9fafb',
-          borderRadius: '8px',
-          padding: '20px',
-          border: '1px solid #e5e7eb'
-        }}>
-          <h2 style={{
-            color: '#111827',
-            marginTop: '0',
-            marginBottom: '20px',
-            fontSize: '24px'
-          }}>
-            {section.name}
-          </h2>
+      <div className="rows">
+        {items.map((item) => (
+          <div key={item.id} className="row">
+            <div className="row-content">
+              <span className="check-id">{item.id}</span>
+              <span className="check-title">{item.title}</span>
+            </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {section.checks.map(check => (
-              <div key={check.id} style={{
-                backgroundColor: 'white',
-                padding: '16px',
-                borderRadius: '6px',
-                border: '1px solid #e5e7eb',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '16px'
-              }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{
-                    fontWeight: '600',
-                    color: '#111827',
-                    marginBottom: '4px',
-                    fontSize: '14px'
-                  }}>
-                    {check.title}
-                  </div>
-                </div>
+            <div className="badges">
+              <span className={`badge severity ${item.severity.toLowerCase()}`}>
+                {item.severity}
+              </span>
 
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  flexShrink: 0
-                }}>
-                  <span style={{
-                    padding: '4px 12px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    color: 'white',
-                    backgroundColor: getSeverityColor(check.severity)
-                  }}>
-                    {check.severity}
-                  </span>
-                  <span style={getStatusStyle(check.status)}>
-                    {check.status}
-                  </span>
-                </div>
-              </div>
-            ))}
+              <span className={`badge status ${item.status.toLowerCase()}`}>
+                {item.status}
+              </span>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }
 
-export default App
+export default function App() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    fetch('/devsecops-pipe/data/compliance.json')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch compliance data')
+        return res.json()
+      })
+      .then(setData)
+      .catch((err) => {
+        console.error(err)
+        setError(err.message)
+      })
+  }, [])
+
+  if (error) {
+    return (
+      <div className="container">
+        <div className="error">
+          <h2>Error Loading Data</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="container">
+        <div className="loading">
+          <div className="spinner"></div>
+          <p>Loading compliance data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container">
+      <header className="header">
+        <h1>Security Compliance Dashboard</h1>
+        <p className="subtitle">AWS Security Posture Assessment</p>
+        {data.generatedAt && (
+          <p className="generated-at">Last updated: {data.generatedAt}</p>
+        )}
+      </header>
+
+      <Section title="IAM" items={data.checks.iam || []} />
+      <Section title="S3" items={data.checks.s3 || []} />
+      <Section title="EC2" items={data.checks.ec2 || []} />
+      <Section title="CloudTrail" items={data.checks.cloudtrail || []} />
+    </div>
+  )
+}
