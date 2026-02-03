@@ -1,0 +1,66 @@
+﻿{
+    "generatedAtUtc":  "2026-02-03T05:26:29.5892441Z",
+    "target":  {
+                   "userArn":  "arn:aws:iam::567978552126:user/sentinel-readonly",
+                   "account":  "567978552126",
+                   "region":  null
+               },
+    "checks":  {
+                   "iam":  [
+                               {
+                                   "status":  "PASS",
+                                   "title":  "Root account MFA enabled",
+                                   "id":  "IAM-001",
+                                   "severity":  "HIGH"
+                               },
+                               {
+                                   "status":  "PASS",
+                                   "title":  "No AdministratorAccess attached",
+                                   "id":  "IAM-002",
+                                   "severity":  "CRITICAL"
+                               },
+                               {
+                                   "status":  "PASS",
+                                   "title":  "No access keys older than 90 days",
+                                   "id":  "IAM-003",
+                                   "severity":  "HIGH"
+                               }
+                           ],
+                   "ec2":  [
+                               {
+                                   "status":  "PASS",
+                                   "title":  "No SG allows SSH from 0.0.0.0/0",
+                                   "id":  "EC2-001",
+                                   "severity":  "HIGH"
+                               }
+                           ],
+                   "s3":  [
+                              {
+                                  "status":  "PASS",
+                                  "title":  "Block Public Access fully enabled",
+                                  "id":  "S3-001",
+                                  "severity":  "HIGH"
+                              },
+                              {
+                                  "status":  "PASS",
+                                  "title":  "Default encryption enabled",
+                                  "id":  "S3-002",
+                                  "severity":  "HIGH"
+                              },
+                              {
+                                  "status":  "FAIL",
+                                  "title":  "Bucket versioning enabled",
+                                  "id":  "S3-003",
+                                  "severity":  "MEDIUM"
+                              }
+                          ],
+                   "cloudtrail":  [
+                                      {
+                                          "status":  "PASS",
+                                          "title":  "CloudTrail trail exists",
+                                          "id":  "CT-001",
+                                          "severity":  "HIGH"
+                                      }
+                                  ]
+               }
+}
