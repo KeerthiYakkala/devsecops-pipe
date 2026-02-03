@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-02-02",
+  "sections": [
+    {
+      "name": "IAM",
+      "checks": [
+        {
+          "id": "IAM_NO_MFA",
+          "title": "IAM users without MFA",
+          "status": "PASS",
+          "severity": "HIGH",
+          "evidence": "sentinel-readonly had no MFA initially; MFA enabled"
+        },
+        {
+          "id": "IAM_ADMIN_PRIVILEGE",
+          "title": "AdministratorAccess attached",
+          "status": "PASS",
+          "severity": "CRITICAL",
+          "evidence": "PolicyUsers/PolicyRoles/PolicyGroups empty for AdministratorAccess"
+        },
+        {
+          "id": "IAM_OLD_ACCESS_KEYS",
+          "title": "Access keys older than 90 days",
+          "status": "PASS",
+          "severity": "HIGH",
+          "evidence": "sentinel-readonly key created 2026-02-02"
+        },
+        {
+          "id": "ROOT_ACCOUNT_USAGE",
+          "title": "Root account usage detected (CloudTrail)",
+          "status": "FAIL",
+          "severity": "CRITICAL",
+          "evidence": "CloudTrail lookup-events returned Username=root events; mfaAuthenticated=true"
+        },
+        {
+          "id": "IAM_OVERPERMISSIVE_POLICY",
+          "title": "Over-permissive customer-managed policies (*:*)",
+          "status": "PASS",
+          "severity": "HIGH",
+          "evidence": "No customer-managed policies (list-policies --scope Local empty)"
+        }
+      ]
+    },
+    {
+      "name": "S3",
+      "checks": [
+        {
+          "id": "S3_PUBLIC_ACCESS_BLOCK",
+          "title": "S3 Block Public Access enabled",
+          "status": "PASS",
+          "severity": "HIGH",
+          "evidence": "BlockPublicAcls/IgnorePublicAcls/BlockPublicPolicy/RestrictPublicBuckets all true"
+        },
+        {
+          "id": "S3_BUCKET_POLICY_PUBLIC",
+          "title": "S3 bucket policy public access",
+          "status": "PASS",
+          "severity": "HIGH",
+          "evidence": "Bucket policy allows only cloudtrail.amazonaws.com service principal"
+        },
+        {
+          "id": "S3_DEFAULT_ENCRYPTION",
+          "title": "S3 default encryption enabled",
+          "status": "PASS",
+          "severity": "HIGH",
+          "evidence": "SSEAlgorithm=AES256"
+        },
+        {
+          "id": "S3_VERSIONING",
+          "title": "S3 versioning enabled",
+          "status": "FAIL",
+          "severity": "MEDIUM",
+          "evidence": "get-bucket-versioning returned empty; readonly user cannot enable versioning (AccessDenied)"
+        }
+      ]
+    },
+    {
+      "name": "EC2",
+      "checks": [
+        {
+          "id": "EC2_SG_SSH_OPEN_WORLD",
+          "title": "Security groups allow 0.0.0.0/0 on SSH (22)",
+          "status": "PASS",
+          "severity": "HIGH",
+          "evidence": "SSH query returned []"
+        },
+        {
+          "id": "EC2_SG_RDP_OPEN_WORLD",
+          "title": "Security groups allow 0.0.0.0/0 on RDP (3389)",
+          "status": "PASS",
+          "severity": "HIGH",
+          "evidence": "RDP query returned []"
+        },
+        {
+          "id": "EC2_PUBLIC_IP_INSTANCES",
+          "title": "Instances with public IPs",
+          "status": "PASS",
+          "severity": "MEDIUM",
+          "evidence": "describe-instances returned [] (no instances)"
+        },
+        {
+          "id": "EC2_EBS_ENCRYPTION_DEFAULT",
+          "title": "EBS encryption by default enabled",
+          "status": "FAIL",
+          "severity": "HIGH",
+          "evidence": "get-ebs-encryption-by-default returned false"
+        }
+      ]
+    },
+    {
+      "name": "CloudTrail",
+      "checks": [
+        {
+          "id": "CLOUDTRAIL_ENABLED",
+          "title": "CloudTrail enabled",
+          "status": "PASS",
+          "severity": "HIGH",
+          "evidence": "describe-trails shows sentinel-trail"
+        }
+      ]
+    }
+  ]
+}
