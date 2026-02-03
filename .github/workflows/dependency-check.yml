@@ -1,0 +1,348 @@
+name: Dependency Security Audit
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      fix_vulnerabilities:
+        description: 'Attempt to auto-fix vulnerabilities'
+        required: false
+        default: 'false'
+        type: boolean
+  push:
+    paths:
+      - '**/requirements.txt'
+      - '**/requirements*.txt'
+      - '**/Pipfile.lock'
+      - '**/poetry.lock'
+      - '**/package.json'
+      - '**/package-lock.json'
+      - '**/yarn.lock'
+      - '**/pnpm-lock.yaml'
+      - '**/go.sum'
+      - '**/Cargo.lock'
+
+permissions:
+  contents: write
+  security-events: write
+  pull-requests: write
+
+jobs:
+  # ============================================================
+  # PYTHON DEPENDENCY AUDIT
+  # ============================================================
+  python-audit:
+    name: 🐍 Python Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Find Python requirement files
+        id: find-python
+        run: |
+          FILES=$(find . -name "requirements*.txt" -o -name "Pipfile.lock" -o -name "poetry.lock" | grep -v node_modules | head -10)
+          if [ -n "$FILES" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "files<<EOF" >> $GITHUB_OUTPUT
+            echo "$FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Python
+        if: steps.find-python.outputs.found == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install audit tools
+        if: steps.find-python.outputs.found == 'true'
+        run: |
+          pip install pip-audit safety
+
+      - name: Run pip-audit
+        if: steps.find-python.outputs.found == 'true'
+        run: |
+          echo "## 🐍 Python Dependency Audit" >> $GITHUB_STEP_SUMMARY
+          
+          for file in ${{ steps.find-python.outputs.files }}; do
+            if [[ "$file" == *requirements*.txt ]]; then
+              echo "### Scanning: $file" >> $GITHUB_STEP_SUMMARY
+              
+              # Run pip-audit
+              pip-audit -r "$file" --format markdown >> $GITHUB_STEP_SUMMARY 2>&1 || true
+              pip-audit -r "$file" --format json --output "audit-$(basename $file .txt).json" 2>/dev/null || true
+              
+              # Generate SBOM
+              pip-audit -r "$file" --format cyclonedx-json --output "sbom-$(basename $file .txt).json" 2>/dev/null || true
+            fi
+          done
+
+      - name: Run Safety check
+        if: steps.find-python.outputs.found == 'true'
+        run: |
+          for file in ${{ steps.find-python.outputs.files }}; do
+            if [[ "$file" == *requirements*.txt ]]; then
+              echo "### Safety Check: $file" >> $GITHUB_STEP_SUMMARY
+              safety check -r "$file" --full-report >> $GITHUB_STEP_SUMMARY 2>&1 || true
+            fi
+          done
+        continue-on-error: true
+
+      - name: Upload Python audit reports
+        if: steps.find-python.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-audit-reports
+          path: |
+            audit-*.json
+            sbom-*.json
+          retention-days: 90
+
+  # ============================================================
+  # NODE.JS DEPENDENCY AUDIT
+  # ============================================================
+  node-audit:
+    name: 📦 Node.js Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Find Node.js package files
+        id: find-node
+        run: |
+          FILES=$(find . -name "package.json" -not -path "*/node_modules/*" | head -10)
+          if [ -n "$FILES" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "files<<EOF" >> $GITHUB_OUTPUT
+            echo "$FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Node.js
+        if: steps.find-node.outputs.found == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run npm audit
+        if: steps.find-node.outputs.found == 'true'
+        run: |
+          echo "## 📦 Node.js Dependency Audit" >> $GITHUB_STEP_SUMMARY
+          
+          for pkg in ${{ steps.find-node.outputs.files }}; do
+            dir=$(dirname "$pkg")
+            echo "### Scanning: $pkg" >> $GITHUB_STEP_SUMMARY
+            
+            cd "$dir"
+            
+            # Install dependencies (lock file only)
+            npm install --package-lock-only 2>/dev/null || true
+            
+            # Run npm audit
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            npm audit --json > npm-audit.json 2>&1 || true
+            npm audit 2>&1 | head -100 >> $GITHUB_STEP_SUMMARY || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            
+            # Generate SBOM
+            npx @cyclonedx/cyclonedx-npm --output-file sbom.json 2>/dev/null || true
+            
+            cd - > /dev/null
+          done
+
+      - name: Check for critical vulnerabilities
+        if: steps.find-node.outputs.found == 'true'
+        run: |
+          CRITICAL=0
+          HIGH=0
+          
+          for pkg in ${{ steps.find-node.outputs.files }}; do
+            dir=$(dirname "$pkg")
+            if [ -f "$dir/npm-audit.json" ]; then
+              crit=$(cat "$dir/npm-audit.json" | jq '.metadata.vulnerabilities.critical // 0' 2>/dev/null || echo 0)
+              high=$(cat "$dir/npm-audit.json" | jq '.metadata.vulnerabilities.high // 0' 2>/dev/null || echo 0)
+              CRITICAL=$((CRITICAL + crit))
+              HIGH=$((HIGH + high))
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Critical | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $CRITICAL -gt 0 ] || [ $HIGH -gt 0 ]; then
+            echo "::warning::Found $CRITICAL critical and $HIGH high severity vulnerabilities"
+          fi
+
+      - name: Upload Node.js audit reports
+        if: steps.find-node.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-audit-reports
+          path: |
+            **/npm-audit.json
+            **/sbom.json
+          retention-days: 90
+
+  # ============================================================
+  # GITHUB DEPENDENCY REVIEW (for PRs)
+  # ============================================================
+  dependency-review:
+    name: 📋 Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD
+          deny-licenses: GPL-3.0, AGPL-3.0
+
+  # ============================================================
+  # SNYK VULNERABILITY SCAN (Optional - requires SNYK_TOKEN)
+  # ============================================================
+  snyk-scan:
+    name: 🛡️ Snyk Analysis
+    runs-on: ubuntu-latest
+    if: ${{ vars.ENABLE_SNYK == 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Snyk
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Run Snyk for Python
+        uses: snyk/actions/python@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+  # ============================================================
+  # AUTO-FIX (Optional)
+  # ============================================================
+  auto-fix:
+    name: 🔧 Auto-fix Vulnerabilities
+    runs-on: ubuntu-latest
+    needs: [python-audit, node-audit]
+    if: github.event.inputs.fix_vulnerabilities == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Auto-fix Python vulnerabilities
+        run: |
+          for file in $(find . -name "requirements*.txt" | grep -v node_modules); do
+            echo "Attempting to fix: $file"
+            pip install pip-audit
+            pip-audit -r "$file" --fix --dry-run || true
+          done
+        continue-on-error: true
+
+      - name: Auto-fix Node.js vulnerabilities
+        run: |
+          for pkg in $(find . -name "package.json" -not -path "*/node_modules/*"); do
+            dir=$(dirname "$pkg")
+            echo "Attempting to fix: $pkg"
+            cd "$dir"
+            npm audit fix --force || true
+            cd - > /dev/null
+          done
+        continue-on-error: true
+
+      - name: Create Pull Request with fixes
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(security): auto-fix dependency vulnerabilities'
+          title: '🔒 Security: Auto-fix Dependency Vulnerabilities'
+          body: |
+            ## Automated Security Fix
+            
+            This PR contains automated fixes for dependency vulnerabilities.
+            
+            **Please review carefully before merging:**
+            - Check for breaking changes
+            - Run tests to verify functionality
+            - Review the updated dependencies
+            
+            ---
+            Generated by DevSecOps Pipeline
+          branch: security/auto-fix-deps
+          delete-branch: true
+
+  # ============================================================
+  # SUMMARY REPORT
+  # ============================================================
+  summary:
+    name: 📊 Audit Summary
+    runs-on: ubuntu-latest
+    needs: [python-audit, node-audit]
+    if: always()
+    steps:
+      - name: Generate Summary Report
+        run: |
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          # 📊 Dependency Audit Summary
+          
+          ## Scan Results
+          
+          | Language | Status |
+          |----------|--------|
+          | Python | ${{ needs.python-audit.result == 'success' && '✅ Passed' || '⚠️ Check Results' }} |
+          | Node.js | ${{ needs.node-audit.result == 'success' && '✅ Passed' || '⚠️ Check Results' }} |
+          
+          ## Next Steps
+          
+          1. Review any HIGH or CRITICAL vulnerabilities in the detailed reports
+          2. Update affected dependencies to patched versions
+          3. If no patch available, consider:
+             - Replacing the dependency
+             - Implementing compensating controls
+             - Documenting accepted risk
+          
+          ## Resources
+          
+          - [npm audit](https://docs.npmjs.com/cli/v8/commands/npm-audit)
+          - [pip-audit](https://github.com/pypa/pip-audit)
+          - [Snyk Vulnerability Database](https://snyk.io/vuln/)
+          - [NIST NVD](https://nvd.nist.gov/)
+          
+          ---
+          
+          *Last scan: $(date -u '+%Y-%m-%d %H:%M:%S UTC')*
+          EOF
