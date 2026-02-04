@@ -1,9 +1,11 @@
 import './Playbooks.css'
+import { useState } from 'react'
 
 const playbooks = [
   {
     id: 1,
     title: 'Credential Leak',
+    scriptName: 'deactivate-key.py',
     trigger: 'Detected exposed API keys, passwords, or credentials in code repository or logs',
     steps: [
       'Immediately revoke the leaked credentials in the affected service',
@@ -16,6 +18,7 @@ const playbooks = [
   {
     id: 2,
     title: 'Brute Force Attack',
+    scriptName: 'block_ip.sh',
     trigger: 'Multiple failed login attempts detected from same IP address or targeting same account',
     steps: [
       'Block the attacking IP addresses at firewall/WAF level',
@@ -28,6 +31,7 @@ const playbooks = [
   {
     id: 3,
     title: 'Unauthorized Cloud Access',
+    scriptName: 'terminate-session.py',
     trigger: 'Cloud access from unusual location, new device, or outside business hours',
     steps: [
       'Suspend the suspicious session immediately',
@@ -40,6 +44,7 @@ const playbooks = [
   {
     id: 4,
     title: 'Insecure Dependency',
+    scriptName: 'patch-dependencies.sh',
     trigger: 'Vulnerability scanner detected high/critical severity issues in dependencies',
     steps: [
       'Identify all affected applications and services',
@@ -52,6 +57,7 @@ const playbooks = [
   {
     id: 5,
     title: 'Malware Detection',
+    scriptName: 'isolate-and-clean.sh',
     trigger: 'Antivirus or EDR system detected malicious file or suspicious behavior',
     steps: [
       'Isolate the infected system from the network immediately',
@@ -63,9 +69,34 @@ const playbooks = [
   }
 ]
 
-function PlaybookCard({ playbook }) {
+function PlaybookCard({ playbook, isUnderAttack, onRemediationComplete }) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+
+  const handleExecuteRemediation = () => {
+    setIsLoading(true)
+    setSuccessMessage('')
+
+    // Simulate script execution with 2 second delay
+    setTimeout(() => {
+      setIsLoading(false)
+      setSuccessMessage(`✅ Remediation Script Executed Successfully: ${playbook.scriptName}`)
+
+      // Notify parent component that remediation is complete
+      if (isUnderAttack) {
+        onRemediationComplete(playbook.id)
+      }
+    }, 2000)
+  }
+
   return (
-    <div className="playbook-card">
+    <div className={`playbook-card ${isUnderAttack ? 'under-attack' : ''}`}>
+      {isUnderAttack && (
+        <div className="attack-banner">
+          🚨 ACTIVE THREAT DETECTED
+        </div>
+      )}
+
       <div className="playbook-header">
         <h3 className="playbook-title">{playbook.title}</h3>
       </div>
@@ -84,22 +115,76 @@ function PlaybookCard({ playbook }) {
             ))}
           </ol>
         </div>
+
+        <div className="playbook-actions">
+          <button
+            className={`execute-button ${isUnderAttack ? 'urgent' : ''}`}
+            onClick={handleExecuteRemediation}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <span className="button-spinner"></span>
+                Executing...
+              </>
+            ) : isUnderAttack ? (
+              '🛡️ Execute Remediation Now!'
+            ) : (
+              'Execute Remediation'
+            )}
+          </button>
+
+          {successMessage && (
+            <div className="success-message">
+              {successMessage}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
 export default function Playbooks() {
+  const [attackedPlaybookId, setAttackedPlaybookId] = useState(null)
+
+  const handleSimulateAttack = () => {
+    // Pick a random playbook
+    const randomIndex = Math.floor(Math.random() * playbooks.length)
+    const randomPlaybook = playbooks[randomIndex]
+    setAttackedPlaybookId(randomPlaybook.id)
+  }
+
+  const handleRemediationComplete = (playbookId) => {
+    // Clear the attack if the correct playbook was remediated
+    if (playbookId === attackedPlaybookId) {
+      setAttackedPlaybookId(null)
+    }
+  }
+
   return (
     <div className="playbooks-container">
       <header className="playbooks-header">
         <h1>Security Incident Response Playbooks</h1>
         <p className="playbooks-subtitle">Automated response procedures for common security incidents</p>
+
+        <button
+          className="simulate-attack-button"
+          onClick={handleSimulateAttack}
+          disabled={attackedPlaybookId !== null}
+        >
+          {attackedPlaybookId !== null ? '⚠️ Attack In Progress' : '⚡ Simulate Attack'}
+        </button>
       </header>
 
       <div className="playbooks-grid">
         {playbooks.map((playbook) => (
-          <PlaybookCard key={playbook.id} playbook={playbook} />
+          <PlaybookCard
+            key={playbook.id}
+            playbook={playbook}
+            isUnderAttack={playbook.id === attackedPlaybookId}
+            onRemediationComplete={handleRemediationComplete}
+          />
         ))}
       </div>
     </div>

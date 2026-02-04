@@ -24,7 +24,34 @@
 .playbooks-subtitle {
   font-size: 1.125rem;
   color: #6b7280;
-  margin: 0;
+  margin: 0 0 1.5rem 0;
+}
+
+.simulate-attack-button {
+  padding: 0.875rem 2rem;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.simulate-attack-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 6px 12px rgba(239, 68, 68, 0.4);
+  transform: translateY(-2px);
+}
+
+.simulate-attack-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .playbooks-grid {
@@ -40,11 +67,47 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .playbook-card:hover {
   box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
+}
+
+.playbook-card.under-attack {
+  border: 3px solid #ef4444;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.8);
+  }
+}
+
+.attack-banner {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.1em;
+  animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .playbook-header {
@@ -116,6 +179,107 @@
   margin-bottom: 0;
 }
 
+/* Execute Remediation Actions */
+.playbook-actions {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.execute-button {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.execute-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+}
+
+.execute-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.execute-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.execute-button.urgent {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.4);
+  animation: urgentPulse 1.5s ease-in-out infinite;
+}
+
+.execute-button.urgent:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  box-shadow: 0 6px 12px rgba(245, 158, 11, 0.5);
+}
+
+@keyframes urgentPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.button-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.success-message {
+  padding: 1rem;
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+  border-left: 4px solid #10b981;
+  border-radius: 6px;
+  color: #065f46;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 768px) {
   .playbooks-container {
     padding: 1rem;
@@ -131,5 +295,10 @@
 
   .playbook-card {
     margin-bottom: 1rem;
+  }
+
+  .execute-button {
+    font-size: 0.9375rem;
+    padding: 0.75rem 1.25rem;
   }
 }
